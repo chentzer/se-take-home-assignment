@@ -1,0 +1,24 @@
+[03:45:31] New NORMAL Order 1
+[03:45:37] Bot 1 processing Order 1
+[03:45:47] Order 1 COMPLETE
+[03:46:00] New NORMAL Order 2
+[03:46:00] Bot 2 processing Order 2
+[03:46:02] New NORMAL Order 3
+[03:46:02] Bot 1 processing Order 3
+[03:46:03] New NORMAL Order 4
+[03:46:04] New NORMAL Order 5
+[03:46:05] New NORMAL Order 6
+[03:46:09] New VIP Order 7
+[03:46:10] Order 2 COMPLETE
+[03:46:10] Bot 2 processing Order 7
+[03:46:12] Order 3 COMPLETE
+[03:46:12] Bot 1 processing Order 4
+[03:46:16] New VIP Order 8
+[03:46:20] Order 7 COMPLETE
+[03:46:20] Bot 2 processing Order 8
+[03:46:22] Order 4 COMPLETE
+[03:46:22] Bot 1 processing Order 5
+[03:46:30] Order 8 COMPLETE
+[03:46:30] Bot 2 processing Order 6
+[03:46:32] Order 5 COMPLETE
+[03:46:40] Order 6 COMPLETE
