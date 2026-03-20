@@ -1,19 +1,18 @@
 #!/bin/bash
-
 # Run Script
-# This script should execute your CLI application and output results to result.txt
+# Runs the compiled CLI
 
-echo "Running CLI application..."
+echo "Running the CLI application..."
 
-# For Go projects:
-# ./order-controller > result.txt
+# Go to code folder
+cd ../code || { echo "Code folder not found"; exit 1; }
 
-# For Node.js projects:
-# node index.js > result.txt
-# or npm start > result.txt
+# Run the CLI
+./app.exe
 
-# Temporary placeholder - remove this when you implement your CLI
-echo "Added 1 bot" > result.txt
-echo "status: bot: [1], order: []" >> result.txt
-
-echo "CLI application execution completed"
+if [ $? -eq 0 ]; then
+    echo "CLI exited successfully"
+else
+    echo "CLI exited with errors"
+    exit 1
+fi

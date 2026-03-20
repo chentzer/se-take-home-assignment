@@ -8,8 +8,24 @@ import (
 type Bot struct {
 	ID           int
 	busy         bool
-	currentOrder *Order
+	CurrentOrder *Order
 	stopChan     chan bool
+}
+
+func NewBot() *Bot {
+	return &Bot{
+		ID:       len(bots) + 1,
+		stopChan: make(chan bool),
+	}
+}
+
+func (b *Bot) PickOrder() {
+	if len(pendingQueue) > 0 {
+		order := pendingQueue[0]
+		pendingQueue = pendingQueue[1:]
+		b.CurrentOrder = order
+		b.busy = true
+	}
 }
 
 func getNextOrder() *Order {
@@ -36,18 +52,15 @@ func (b *Bot) start() {
 			}
 
 			b.busy = true
-			b.currentOrder = order
-
+			b.CurrentOrder = order
 			log("%s", fmt.Sprintf("Bot %d processing Order %d", b.ID, order.ID))
 
 			select {
 			case <-time.After(10 * time.Second):
 				completeOrders = append(completeOrders, *order)
-				log("%s", fmt.Sprintf("Order %d COMPLETE", order.ID))
+				log("%s", fmt.Sprintf("Order %d, Type: %s - COMPLETE", order.ID, order.Type))
 				b.busy = false
-				b.currentOrder = nil
-
-			case <-b.stopChan:
+				b.CurrentOrder = nil
 				log("%s", fmt.Sprintf("Bot %d stopped", b.ID))
 
 				// return order back to queue

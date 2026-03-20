@@ -22,3 +22,33 @@
 [03:46:30] Bot 2 processing Order 6
 [03:46:32] Order 5 COMPLETE
 [03:46:40] Order 6 COMPLETE
+[03:56:51] New VIP Order 9
+[03:56:52] Bot 2 processing Order 9
+[03:57:02] Order 9 COMPLETE
+[03:57:19] New VIP Order 1
+[03:57:21] Bot 1 processing Order 1
+[03:57:31] Order 1, Type: %!d(string=VIP) - COMPLETE
+[03:57:56] New VIP Order 1
+[03:57:57] Bot 1 processing Order 1
+[03:58:07] Order 1, Type: VIP - COMPLETE
+[04:01:36] New VIP Order 2
+[04:01:36] Bot 1 processing Order 2
+[04:01:41] Bot 1 stopped
+[04:03:22] Bot 1 processing Order 2
+[04:03:32] Order 2, Type: VIP - COMPLETE
+[04:04:17] New NORMAL Order 3
+[04:04:17] Bot 1 processing Order 3
+[04:04:20] New VIP Order 4
+[04:04:27] Order 3, Type: NORMAL - COMPLETE
+[04:04:27] Bot 1 processing Order 4
+[04:04:37] Order 4, Type: VIP - COMPLETE
+[04:21:32] New NORMAL Order 1
+[04:21:35] Bot 1 processing Order 1
+[04:21:37] New VIP Order 2
+[04:21:45] Order 1, Type: NORMAL - COMPLETE
+[04:21:45] Bot 1 processing Order 2
+[04:21:55] Order 2, Type: VIP - COMPLETE
+[04:47:06] New NORMAL Order 1
+[04:47:07] Bot 1 processing Order 1
+[04:47:17] Order 1, Type: NORMAL - COMPLETE
+[04:47:17] Bot 1 stopped

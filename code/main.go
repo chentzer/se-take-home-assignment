@@ -9,6 +9,7 @@ import (
 
 var vipQueue []Order
 var normalQueue []Order
+var pendingQueue []*Order
 var completeOrders []Order
 
 var bots []*Bot
