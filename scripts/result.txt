@@ -73,3 +73,5 @@ Final Status:
 [17:32:48] Bot #1 is now IDLE - No pending orders
 [17:33:41] Created VIP Order #4 - Status: PENDING
 [17:33:41] Bot #1 picked up VIP Order #4 - Status: PROCESSING
+[17:36:43] McDonald's Order Management System - Simulation Started
+[17:36:43] System initialized with 0 bots
