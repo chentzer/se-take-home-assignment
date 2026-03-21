@@ -1,18 +1,13 @@
 #!/bin/bash
-# Run Script
-# Runs the compiled CLI
+set -e
 
-echo "Running the CLI application..."
+echo "Running CLI simulation..."
 
 # Go to code folder
 cd ../code || { echo "Code folder not found"; exit 1; }
 
-# Run the CLI
-./app.exe
+# Feed commands to the CLI automatically
+# Example: 2 normal orders, 2 VIP orders, add 2 bots, show status, exit
+echo -e "normal\nvip\nnormal\nvip\naddbot\naddbot\nstatus\nexit" | ./app
 
-if [ $? -eq 0 ]; then
-    echo "CLI exited successfully"
-else
-    echo "CLI exited with errors"
-    exit 1
-fi
+echo "CLI finished. Logs written to ../scripts/result.txt"

@@ -1,18 +1,12 @@
 #!/bin/bash
-# Build Script
-# Compiles Go CLI application
+set -e
 
-echo "Building Go application..."
+echo "Building Go CLI..."
 
 # Go to code folder
 cd ../code || { echo "Code folder not found"; exit 1; }
 
-# Build the CLI executable
-go build -o app.exe
+# Compile CLI
+go build -o app
 
-if [ $? -eq 0 ]; then
-    echo "Build succeeded!"
-else
-    echo "Build failed!"
-    exit 1
-fi
+echo "Build completed. Executable created as code/app"
