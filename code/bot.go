@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -16,15 +15,6 @@ func NewBot() *Bot {
 	return &Bot{
 		ID:       len(bots) + 1,
 		stopChan: make(chan bool),
-	}
-}
-
-func (b *Bot) PickOrder() {
-	if len(pendingQueue) > 0 {
-		order := pendingQueue[0]
-		pendingQueue = pendingQueue[1:]
-		b.CurrentOrder = order
-		b.busy = true
 	}
 }
 
@@ -45,31 +35,61 @@ func getNextOrder() *Order {
 func (b *Bot) start() {
 	go func() {
 		for {
-			order := getNextOrder()
-			if order == nil {
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			b.busy = true
-			b.CurrentOrder = order
-			log("%s", fmt.Sprintf("Bot %d processing Order %d", b.ID, order.ID))
-
 			select {
-			case <-time.After(10 * time.Second):
-				completeOrders = append(completeOrders, *order)
-				log("%s", fmt.Sprintf("Order %d, Type: %s - COMPLETE", order.ID, order.Type))
-				b.busy = false
-				b.CurrentOrder = nil
-				log("%s", fmt.Sprintf("Bot %d stopped", b.ID))
+			case <-b.stopChan:
+				// Bot is stopped
+				if b.busy && b.CurrentOrder != nil {
+					order := b.CurrentOrder
 
-				// return order back to queue
-				if order.Type == "VIP" {
-					vipQueue = append([]Order{*order}, vipQueue...)
+					// Return order to front of queue
+					if order.Type == "VIP" {
+						vipQueue = append([]Order{*order}, vipQueue...)
+					} else {
+						normalQueue = append([]Order{*order}, normalQueue...)
+					}
+
+					log("Bot #%d stopped while processing Order #%d", b.ID, order.ID)
 				} else {
-					normalQueue = append([]Order{*order}, normalQueue...)
+					log("Bot #%d destroyed while IDLE", b.ID)
 				}
 				return
+
+			default:
+				order := getNextOrder()
+
+				if order == nil {
+					if b.busy {
+						b.busy = false
+						log("Bot #%d is now IDLE - No pending orders", b.ID)
+					}
+					time.Sleep(1 * time.Second)
+					continue
+				}
+
+				// Start processing
+				b.busy = true
+				b.CurrentOrder = order
+
+				log("Bot #%d picked up %s Order #%d - Status: PROCESSING",
+					b.ID, order.Type, order.ID)
+
+				time.Sleep(10 * time.Second)
+
+				// Complete order
+				completeOrders = append(completeOrders, *order)
+				completedOrders++
+
+				// Update counters
+				if order.Type == "VIP" {
+					totalVIP++
+				} else {
+					totalNormal++
+				}
+
+				log("Bot #%d completed %s Order #%d - Status: COMPLETE (Processing time: 10s)",
+					b.ID, order.Type, order.ID)
+
+				b.CurrentOrder = nil
 			}
 		}
 	}()
@@ -82,6 +102,7 @@ func addBot() {
 	}
 	bots = append(bots, bot)
 	bot.start()
+	log("Bot #%d created - Status: ACTIVE", bot.ID)
 }
 
 func removeBot() {
@@ -93,6 +114,7 @@ func removeBot() {
 	bots = bots[:len(bots)-1]
 
 	if bot.busy {
-		bot.stopChan <- true
+		close(bot.stopChan)
 	}
+	log("Bot #%d removed - Status: INACTIVE", bot.ID)
 }

@@ -24,3 +24,6 @@ Final Status:
 - Orders Completed: 4
 - Active Bots: 1
 - Pending Orders: 0
+[16:41:58] Created Normal Order #1 - Status: PENDING
+[16:43:35] McDonald's Order Management System - Simulation Started
+[16:43:35] System initialized with 0 bots

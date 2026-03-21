@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 type Order struct {
 	ID   int
 	Type string // "VIP" or "NORMAL"
@@ -12,13 +8,13 @@ type Order struct {
 func addNormalOrder() {
 	order := NewOrder("NORMAL")
 	normalQueue = append(normalQueue, order)
-	log("%s", fmt.Sprintf("New NORMAL Order %d", order.ID))
+	log("Created Normal Order #%d - Status: PENDING", order.ID)
 }
 
 func addVIPOrder() {
 	order := NewOrder("VIP")
 	vipQueue = append(vipQueue, order)
-	log("%s", fmt.Sprintf("New VIP Order %d", order.ID))
+	log("Created VIP Order #%d - Status: PENDING", order.ID)
 }
 
 func NewOrder(orderType string) Order {

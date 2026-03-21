@@ -2,14 +2,21 @@ package main
 
 import "testing"
 
-// Test that bot picks up order from queue
+// Test that bot picks up order from VIP/Normal queue correctly
 func TestBotPickOrder(t *testing.T) {
-	pendingQueue = []*Order{} // reset queue
+	// Reset queues
+	vipQueue = []Order{}
+	normalQueue = []Order{}
+
+	// Add a normal order
 	o := NewOrder("NORMAL")
-	pendingQueue = append(pendingQueue, &o)
+	normalQueue = append(normalQueue, o)
 
 	bot := NewBot()
-	bot.PickOrder()
+
+	// Simulate picking order
+	order := getNextOrder()
+	bot.CurrentOrder = order
 
 	if bot.CurrentOrder == nil {
 		t.Errorf("Bot did not pick an order")
