@@ -27,3 +27,23 @@ Final Status:
 [16:41:58] Created Normal Order #1 - Status: PENDING
 [16:43:35] McDonald's Order Management System - Simulation Started
 [16:43:35] System initialized with 0 bots
+[17:18:27] McDonald's Order Management System - Simulation Started
+[17:18:27] System initialized with 0 bots
+[17:18:27] Created Normal Order #1 - Status: PENDING
+[17:18:27] Created VIP Order #2 - Status: PENDING
+[17:18:27] Created Normal Order #3 - Status: PENDING
+[17:18:27] Created VIP Order #4 - Status: PENDING
+[17:18:27] Bot #1 picked up VIP Order #2 - Status: PROCESSING
+[17:18:27] Bot #1 created - Status: ACTIVE
+[17:18:27] Bot #2 created - Status: ACTIVE
+[17:18:27] Bot #2 picked up VIP Order #4 - Status: PROCESSING
+[17:19:08] McDonald's Order Management System - Simulation Started
+[17:19:08] System initialized with 0 bots
+[17:19:08] Created Normal Order #1 - Status: PENDING
+[17:19:08] Created VIP Order #2 - Status: PENDING
+[17:19:08] Created Normal Order #3 - Status: PENDING
+[17:19:08] Created VIP Order #4 - Status: PENDING
+[17:19:08] Bot #1 created - Status: ACTIVE
+[17:19:08] Bot #1 picked up VIP Order #2 - Status: PROCESSING
+[17:19:08] Bot #2 created - Status: ACTIVE
+[17:19:08] Bot #2 picked up VIP Order #4 - Status: PROCESSING
