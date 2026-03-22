@@ -1,14 +1,14 @@
 #!/bin/bash
 
-echo "Building McDonald's Order Management System..."
+echo "Building CLI application..."
 
 cd "$(dirname "$0")/../code" || exit 1
 
 # Build the application
-go build -o mcdonalds-bot .
+go build -o order-controller .
 
 if [ $? -eq 0 ]; then
-    echo "Build successful! Binary created: code/mcdonalds-bot"
+    echo "Build successful! Binary created: code/order-controller"
 else
     echo "Build failed!"
     exit 1
