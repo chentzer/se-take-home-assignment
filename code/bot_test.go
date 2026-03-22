@@ -63,7 +63,7 @@ func TestBotProcessesOrder(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	mu.Lock()
-	hasOrder := bots[0].CurrentOrder != nil
+	hasOrder := bots[0].GetCurrentOrder() != nil
 	mu.Unlock()
 
 	if !hasOrder {
@@ -95,7 +95,7 @@ func TestBotReturnsOrderWhenRemoved(t *testing.T) {
 
 	mu.Lock()
 	queueLen := len(normalQueue)
-	hasOrder := bots[0].CurrentOrder != nil
+	hasOrder := bots[0].GetCurrentOrder() != nil
 	mu.Unlock()
 
 	if queueLen != 0 {
@@ -155,8 +155,9 @@ func TestVIPOrderPriority(t *testing.T) {
 
 	mu.Lock()
 	bot := bots[0]
-	if bot.CurrentOrder != nil && bot.CurrentOrder.Type != "VIP" {
-		t.Errorf("Bot should pick VIP first, got %s", bot.CurrentOrder.Type)
+	currentOrder := bot.GetCurrentOrder()
+	if currentOrder != nil && currentOrder.Type != "VIP" {
+		t.Errorf("Bot should pick VIP first, got %s", currentOrder.Type)
 	}
 	mu.Unlock()
 }

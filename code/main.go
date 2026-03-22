@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -27,9 +28,27 @@ var shutdownChan = make(chan struct{})
 var logFile *os.File
 var logMutex sync.Mutex
 
+// Command line flags
+var demoMode bool
+var outputFile string
+
 func main() {
+	flag.BoolVar(&demoMode, "demo", false, "Run in demo mode with predefined commands")
+	flag.StringVar(&outputFile, "output", "", "Output file path for logs (default: ../scripts/result.txt)")
+	flag.Parse()
+
+	initLogFile()
 	setupGracefulShutdown()
 
+	if demoMode {
+		runDemoMode()
+		return
+	}
+
+	runInteractiveMode()
+}
+
+func runInteractiveMode() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	log("McDonald's Order Management System - Simulation Started")
@@ -51,28 +70,64 @@ func main() {
 		}
 
 		cmd := scanner.Text()
-
-		switch cmd {
-		case "normal":
-			addNormalOrder()
-		case "vip":
-			addVIPOrder()
-		case "addbot":
-			addBot()
-		case "removebot":
-			removeBot()
-		case "status":
-			printStatus()
-		case "help":
-			printHelp()
-		case "exit":
-			log("Exit command received")
-			gracefulShutdown()
+		processCommand(cmd)
+		if cmd == "exit" {
 			return
-		default:
-			if cmd != "" {
-				fmt.Println("Unknown command. Type 'help' for available commands.")
-			}
+		}
+	}
+}
+
+func runDemoMode() {
+	log("McDonald's Order Management System - Demo Mode Started")
+	log("System initialized with %d bots", len(bots))
+
+	// Demo sequence that showcases all functionality
+	commands := []struct {
+		cmd   string
+		delay time.Duration
+	}{
+		{"normal", 100 * time.Millisecond},
+		{"vip", 100 * time.Millisecond},
+		{"normal", 100 * time.Millisecond},
+		{"addbot", 100 * time.Millisecond},
+		{"addbot", 100 * time.Millisecond},
+		{"status", 2 * time.Second},
+		{"status", 12 * time.Second}, // Wait for orders to complete
+		{"removebot", 100 * time.Millisecond},
+		{"status", 100 * time.Millisecond},
+		{"exit", 0},
+	}
+
+	for _, c := range commands {
+		log("Command: %s", c.cmd)
+		processCommand(c.cmd)
+		if c.cmd == "exit" {
+			return
+		}
+		time.Sleep(c.delay)
+	}
+}
+
+func processCommand(cmd string) {
+	switch cmd {
+	case "normal":
+		addNormalOrder()
+	case "vip":
+		addVIPOrder()
+	case "addbot":
+		addBot()
+	case "removebot":
+		removeBot()
+	case "status":
+		printStatus()
+	case "help":
+		printHelp()
+	case "exit":
+		log("Exit command received")
+		gracefulShutdown()
+	default:
+		if cmd != "" {
+			fmt.Println("Unknown command. Type 'help' for available commands.")
 		}
 	}
 }
@@ -162,11 +217,38 @@ func printStatus() {
 	fmt.Println("╚════════════════════════════════════════╝")
 }
 
-func init() {
+func initLogFile() {
+	var logPath string
+
+	if outputFile != "" {
+		// Use the specified output file path
+		logPath = outputFile
+	} else {
+		// Default path: try to find scripts directory relative to executable or current directory
+		execPath, err := os.Executable()
+		if err == nil {
+			// Try relative to executable (for built binary)
+			scriptsDir := execPath + "/../scripts"
+			if _, err := os.Stat(scriptsDir); err == nil {
+				logPath = scriptsDir + "/result.txt"
+			}
+		}
+
+		if logPath == "" {
+			// Fallback: relative to current working directory
+			logPath = "../scripts/result.txt"
+		}
+	}
+
 	var err error
-	logFile, err = os.OpenFile("../scripts/result.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		logFile = nil
+		// Try current directory as last resort
+		logFile, err = os.OpenFile("result.txt", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Could not open log file: %v\n", err)
+			logFile = nil
+		}
 	}
 }
 
@@ -179,7 +261,11 @@ func log(format string, args ...interface{}) {
 
 	if logFile != nil {
 		logMutex.Lock()
-		defer logMutex.Unlock()
-		logFile.WriteString(line)
+		_, err := logFile.WriteString(line)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to write to log file: %v\n", err)
+		}
+		logFile.Sync() // Ensure data is flushed to disk
+		logMutex.Unlock()
 	}
 }

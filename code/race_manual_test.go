@@ -175,7 +175,7 @@ func TestConcurrentOperations(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 
 		mu.Lock()
-		firstOrder := bots[0].CurrentOrder
+		firstOrder := bots[0].GetCurrentOrder()
 		mu.Unlock()
 
 		// First order picked should be VIP (order 2), not normal (order 1)
@@ -191,7 +191,7 @@ func TestConcurrentOperations(t *testing.T) {
 		time.Sleep(11 * time.Second)
 
 		mu.Lock()
-		secondOrder := bots[0].CurrentOrder
+		secondOrder := bots[0].GetCurrentOrder()
 		mu.Unlock()
 
 		// Second order should be the other VIP (order 4)

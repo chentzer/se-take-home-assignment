@@ -9,7 +9,8 @@ import (
 type Bot struct {
 	ID           int
 	busy         int32
-	CurrentOrder *Order
+	currentOrder *Order
+	orderMu      sync.Mutex // Protects currentOrder
 	stopChan     chan struct{}
 	stopOnce     sync.Once
 }
@@ -19,6 +20,20 @@ func NewBot(id int) *Bot {
 		ID:       id,
 		stopChan: make(chan struct{}),
 	}
+}
+
+// GetCurrentOrder safely returns the current order being processed
+func (b *Bot) GetCurrentOrder() *Order {
+	b.orderMu.Lock()
+	defer b.orderMu.Unlock()
+	return b.currentOrder
+}
+
+// SetCurrentOrder safely sets the current order
+func (b *Bot) SetCurrentOrder(order *Order) {
+	b.orderMu.Lock()
+	defer b.orderMu.Unlock()
+	b.currentOrder = order
 }
 
 func (b *Bot) start() {
@@ -42,14 +57,14 @@ func (b *Bot) start() {
 				continue
 			}
 
-			b.CurrentOrder = order
+			b.SetCurrentOrder(order)
 
 			log("Bot #%d picked up %s Order #%d - Status: PROCESSING", b.ID, order.Type, order.ID)
 
 			processed := b.processOrder(order)
 
 			atomic.StoreInt32(&b.busy, 0)
-			b.CurrentOrder = nil
+			b.SetCurrentOrder(nil)
 
 			if !processed {
 				return

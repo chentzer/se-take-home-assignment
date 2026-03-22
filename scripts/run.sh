@@ -6,20 +6,12 @@ echo "Running CLI application..."
 cd "$(dirname "$0")/../code" || exit 1
 
 # Clear previous results
-echo "" > ../scripts/result.txt
+> ../scripts/result.txt
 
-# Run the CLI application with commands
-{
-    echo "normal"
-    echo "vip"
-    echo "normal"
-    echo "addbot"
-    echo "addbot"
-    sleep 2
-    echo "status"
-    sleep 12
-    echo "status"
-    echo "exit"
-} | go run . > ../scripts/result.txt 2>&1
+# Run the CLI application in demo mode
+# The -demo flag runs a predefined sequence that demonstrates all functionality
+# The -output flag specifies where to write the log output
+./order-controller -demo -output ../scripts/result.txt
 
 echo "CLI application execution completed"
+echo "Results written to scripts/result.txt"
