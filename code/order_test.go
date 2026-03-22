@@ -24,8 +24,8 @@ func TestCreateNormalOrder(t *testing.T) {
 		t.Errorf("Expected NORMAL, got %s", order.Type)
 	}
 
-	if c.TotalNormal != 1 {
-		t.Errorf("Expected TotalNormal=1, got %d", c.TotalNormal)
+	if c.GetTotalNormal() != 1 {
+		t.Errorf("Expected TotalNormal=1, got %d", c.GetTotalNormal())
 	}
 }
 
@@ -42,8 +42,8 @@ func TestCreateVIPOrder(t *testing.T) {
 		t.Errorf("Expected VIP, got %s", order.Type)
 	}
 
-	if c.TotalVIP != 1 {
-		t.Errorf("Expected TotalVIP=1, got %d", c.TotalVIP)
+	if c.GetTotalVIP() != 1 {
+		t.Errorf("Expected TotalVIP=1, got %d", c.GetTotalVIP())
 	}
 }
 

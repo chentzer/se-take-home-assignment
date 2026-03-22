@@ -32,15 +32,15 @@ type Controller struct {
 
 	vipQueue       []*Order
 	normalQueue    []*Order
-	CompleteOrders []*Order
+	completeOrders []*Order
 
 	Bots []*Bot
 
 	orderID         int
 	nextBotID       int // Monotonically increasing bot ID
-	TotalVIP        int
-	TotalNormal     int
-	CompletedOrders int
+	totalVIP        int
+	totalNormal     int
+	completedOrders int
 
 	LogFunc func(format string, args ...interface{})
 }
@@ -50,7 +50,7 @@ func NewController(logFunc func(format string, args ...interface{})) *Controller
 	return &Controller{
 		vipQueue:       []*Order{},
 		normalQueue:    []*Order{},
-		CompleteOrders: []*Order{},
+		completeOrders: []*Order{},
 		Bots:           []*Bot{},
 		orderID:        1,
 		nextBotID:      1,
@@ -75,10 +75,10 @@ func (c *Controller) NewOrder(orderType string) (*Order, error) {
 	c.orderID++
 
 	if orderType == OrderTypeVIP {
-		c.TotalVIP++
+		c.totalVIP++
 		c.vipQueue = append(c.vipQueue, order)
 	} else {
-		c.TotalNormal++
+		c.totalNormal++
 		c.normalQueue = append(c.normalQueue, order)
 	}
 
@@ -107,31 +107,31 @@ func (c *Controller) GetNextOrder() *Order {
 	return nil
 }
 
+// insertOrderByTime inserts an order into a queue maintaining FIFO order by CreatedAt
+func insertOrderByTime(queue []*Order, order *Order) []*Order {
+	insertIndex := len(queue)
+	for i, existingOrder := range queue {
+		if existingOrder.CreatedAt.After(order.CreatedAt) {
+			insertIndex = i
+			break
+		}
+	}
+	// Insert at the found position
+	queue = append(queue, nil)
+	copy(queue[insertIndex+1:], queue[insertIndex:])
+	queue[insertIndex] = order
+	return queue
+}
+
 // ReturnOrderToQueue returns an order to its original position maintaining priority and FIFO
 func (c *Controller) ReturnOrderToQueue(order *Order) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if order.Type == OrderTypeVIP {
-		insertIndex := 0
-		for i, existingOrder := range c.vipQueue {
-			if existingOrder.CreatedAt.After(order.CreatedAt) {
-				insertIndex = i
-				break
-			}
-			insertIndex = i + 1
-		}
-		c.vipQueue = append(c.vipQueue[:insertIndex], append([]*Order{order}, c.vipQueue[insertIndex:]...)...)
+		c.vipQueue = insertOrderByTime(c.vipQueue, order)
 	} else {
-		insertIndex := 0
-		for i, existingOrder := range c.normalQueue {
-			if existingOrder.CreatedAt.After(order.CreatedAt) {
-				insertIndex = i
-				break
-			}
-			insertIndex = i + 1
-		}
-		c.normalQueue = append(c.normalQueue[:insertIndex], append([]*Order{order}, c.normalQueue[insertIndex:]...)...)
+		c.normalQueue = insertOrderByTime(c.normalQueue, order)
 	}
 }
 
@@ -139,8 +139,8 @@ func (c *Controller) ReturnOrderToQueue(order *Order) {
 func (c *Controller) CompleteOrder(order *Order) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.CompletedOrders++
-	c.CompleteOrders = append(c.CompleteOrders, order)
+	c.completedOrders++
+	c.completeOrders = append(c.completeOrders, order)
 }
 
 // GetPendingCount returns the number of pending orders
@@ -154,7 +154,35 @@ func (c *Controller) GetPendingCount() (vip, normal int) {
 func (c *Controller) GetStats() (totalVIP, totalNormal, completed, pendingVIP, pendingNormal, activeBots int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.TotalVIP, c.TotalNormal, c.CompletedOrders, len(c.vipQueue), len(c.normalQueue), len(c.Bots)
+	return c.totalVIP, c.totalNormal, c.completedOrders, len(c.vipQueue), len(c.normalQueue), len(c.Bots)
+}
+
+// GetCompletedOrders returns the list of completed orders
+func (c *Controller) GetCompletedOrders() []*Order {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.completeOrders
+}
+
+// GetCompletedCount returns the number of completed orders
+func (c *Controller) GetCompletedCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.completedOrders
+}
+
+// GetTotalVIP returns the total number of VIP orders created
+func (c *Controller) GetTotalVIP() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.totalVIP
+}
+
+// GetTotalNormal returns the total number of normal orders created
+func (c *Controller) GetTotalNormal() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.totalNormal
 }
 
 // Log calls the log function if set

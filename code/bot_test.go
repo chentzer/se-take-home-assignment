@@ -73,11 +73,12 @@ func TestBotProcessesOrder(t *testing.T) {
 
 	time.Sleep(11 * time.Second)
 
-	if c.CompletedOrders != 1 {
-		t.Errorf("Expected 1 completed order, got %d", c.CompletedOrders)
+	if c.GetCompletedCount() != 1 {
+		t.Errorf("Expected 1 completed order, got %d", c.GetCompletedCount())
 	}
-	if c.CompleteOrders[0].ID != order.ID {
-		t.Errorf("Expected order ID %d, got %d", order.ID, c.CompleteOrders[0].ID)
+	completedOrders := c.GetCompletedOrders()
+	if completedOrders[0].ID != order.ID {
+		t.Errorf("Expected order ID %d, got %d", order.ID, completedOrders[0].ID)
 	}
 
 	c.StopAllBots()

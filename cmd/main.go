@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"se-take-home-assignment/code"
 	"sync"
 	"syscall"
@@ -212,14 +213,15 @@ func initLogFile() {
 	} else {
 		execPath, err := os.Executable()
 		if err == nil {
-			scriptsDir := execPath + "/../scripts"
+			execDir := filepath.Dir(execPath)
+			scriptsDir := filepath.Join(execDir, "..", "scripts")
 			if _, err := os.Stat(scriptsDir); err == nil {
-				logPath = scriptsDir + "/result.txt"
+				logPath = filepath.Join(scriptsDir, "result.txt")
 			}
 		}
 
 		if logPath == "" {
-			logPath = "../scripts/result.txt"
+			logPath = filepath.Join("..", "scripts", "result.txt")
 		}
 	}
 
