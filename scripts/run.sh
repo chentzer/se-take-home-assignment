@@ -1,11 +1,11 @@
 #!/bin/bash
-set -e
 
-echo "Running CLI simulation..."
+echo "Running McDonald's Order Management System..."
 
-# Go to code folder
-cd code || { echo "Code folder not found"; exit 1; }
+cd "$(dirname "$0")/../code" || exit 1
 
-#!/bin/bash
-echo "Starting CLI simulation..."
-./app
+# Clear previous output
+echo "" > ../scripts/result.txt
+
+# Run the application
+./mcdonalds-bot

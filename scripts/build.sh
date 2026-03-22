@@ -1,12 +1,15 @@
 #!/bin/bash
-set -e
 
-echo "Building Go CLI..."
+echo "Building McDonald's Order Management System..."
 
-# Go to code folder
-cd code || { echo "Code folder not found"; exit 1; }
+cd "$(dirname "$0")/../code" || exit 1
 
-# Compile CLI
-go build -o app
+# Build the application
+go build -o mcdonalds-bot .
 
-echo "Build completed. Executable created as code/app"
+if [ $? -eq 0 ]; then
+    echo "Build successful! Binary created: code/mcdonalds-bot"
+else
+    echo "Build failed!"
+    exit 1
+fi

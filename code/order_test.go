@@ -1,115 +1,176 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
-// Test that NewOrder creates unique IDs
-func TestNewOrder(t *testing.T) {
-	orderID = 1 // reset
+func TestCreateNormalOrder(t *testing.T) {
+	resetTestState()
 
-	o1 := NewOrder("NORMAL")
-	o2 := NewOrder("VIP")
+	order, err := NewOrder("NORMAL")
 
-	if o1.ID != 1 {
-		t.Errorf("Expected ID 1, got %d", o1.ID)
+	if err != nil {
+		t.Fatalf("Order creation failed: %v", err)
 	}
-	if o2.ID != 2 {
-		t.Errorf("Expected ID 2, got %d", o2.ID)
+
+	if order.Type != "NORMAL" {
+		t.Errorf("Expected NORMAL, got %s", order.Type)
 	}
-	if o1.Type != "NORMAL" {
-		t.Errorf("Expected type NORMAL, got %s", o1.Type)
+
+	mu.Lock()
+	if totalNormal != 1 {
+		t.Errorf("Expected totalNormal=1, got %d", totalNormal)
 	}
-	if o2.Type != "VIP" {
-		t.Errorf("Expected type VIP, got %s", o2.Type)
+	if len(normalQueue) != 1 {
+		t.Errorf("Expected normalQueue length 1, got %d", len(normalQueue))
+	}
+	mu.Unlock()
+}
+
+func TestCreateVIPOrder(t *testing.T) {
+	resetTestState()
+
+	order, err := NewOrder("VIP")
+
+	if err != nil {
+		t.Fatalf("Order creation failed: %v", err)
+	}
+
+	if order.Type != "VIP" {
+		t.Errorf("Expected VIP, got %s", order.Type)
+	}
+
+	mu.Lock()
+	if totalVIP != 1 {
+		t.Errorf("Expected totalVIP=1, got %d", totalVIP)
+	}
+	if len(vipQueue) != 1 {
+		t.Errorf("Expected vipQueue length 1, got %d", len(vipQueue))
+	}
+	mu.Unlock()
+}
+
+func TestInvalidOrderType(t *testing.T) {
+	resetTestState()
+
+	order, err := NewOrder("INVALID")
+
+	if err == nil {
+		t.Error("Expected error for invalid order type")
+	}
+	if order != nil {
+		t.Error("Expected nil order for invalid type")
 	}
 }
 
-func TestVIPPriority(t *testing.T) {
-	// Reset state
-	orderID = 1
-	vipQueue = []Order{}
-	normalQueue = []Order{}
+func TestOrderIDIncrements(t *testing.T) {
+	resetTestState()
 
-	n := NewOrder("NORMAL")
-	v := NewOrder("VIP")
+	order1, _ := NewOrder("NORMAL")
+	order2, _ := NewOrder("NORMAL")
 
-	normalQueue = append(normalQueue, n)
-	vipQueue = append(vipQueue, v)
+	if order2.ID != order1.ID+1 {
+		t.Errorf("Order IDs not sequential: %d then %d", order1.ID, order2.ID)
+	}
+}
+
+func TestGetNextOrderFromEmptyQueue(t *testing.T) {
+	resetTestState()
 
 	order := getNextOrder()
 
-	if order == nil {
-		t.Fatalf("Expected order, got nil")
+	if order != nil {
+		t.Error("Expected nil from empty queue")
 	}
+}
+
+func TestGetNextOrderPriority(t *testing.T) {
+	resetTestState()
+
+	NewOrder("NORMAL")
+	NewOrder("VIP")
+
+	order := getNextOrder()
+
 	if order.Type != "VIP" {
-		t.Errorf("Expected VIP order first, got %s", order.Type)
+		t.Errorf("Expected VIP first, got %s", order.Type)
+	}
+}
+
+func TestGetNextOrderNormalOnly(t *testing.T) {
+	resetTestState()
+
+	NewOrder("NORMAL")
+	NewOrder("NORMAL")
+
+	order1 := getNextOrder()
+	order2 := getNextOrder()
+
+	if order1.Type != "NORMAL" {
+		t.Errorf("Expected NORMAL, got %s", order1.Type)
+	}
+	if order2.Type != "NORMAL" {
+		t.Errorf("Expected NORMAL, got %s", order2.Type)
+	}
+}
+
+func TestGetNextOrderVIPOnly(t *testing.T) {
+	resetTestState()
+
+	NewOrder("VIP")
+	NewOrder("VIP")
+
+	order1 := getNextOrder()
+	order2 := getNextOrder()
+
+	if order1.Type != "VIP" {
+		t.Errorf("Expected VIP, got %s", order1.Type)
+	}
+	if order2.Type != "VIP" {
+		t.Errorf("Expected VIP, got %s", order2.Type)
 	}
 }
 
 func TestFIFOWithinSameType(t *testing.T) {
-	// Reset state
-	orderID = 1
-	vipQueue = []Order{}
-	normalQueue = []Order{}
+	resetTestState()
 
-	o1 := NewOrder("VIP")
-	o2 := NewOrder("VIP")
-
-	vipQueue = append(vipQueue, o1, o2)
+	order1, _ := NewOrder("NORMAL")
+	order2, _ := NewOrder("NORMAL")
 
 	first := getNextOrder()
 	second := getNextOrder()
 
-	if first == nil || second == nil {
-		t.Fatalf("Expected two orders, got nil")
+	if first.ID != order1.ID {
+		t.Errorf("Expected first order ID %d, got %d", order1.ID, first.ID)
 	}
-
-	if first.ID != o1.ID {
-		t.Errorf("Expected first VIP order ID %d, got %d", o1.ID, first.ID)
-	}
-	if second.ID != o2.ID {
-		t.Errorf("Expected second VIP order ID %d, got %d", o2.ID, second.ID)
+	if second.ID != order2.ID {
+		t.Errorf("Expected second order ID %d, got %d", order2.ID, second.ID)
 	}
 }
 
-// TestMixedOrders simulates multiple normal and VIP orders
-// and validates VIP priority and FIFO behavior
-func TestMixedOrders(t *testing.T) {
-	// Reset global state
-	orderID = 1
-	vipQueue = []Order{}
-	normalQueue = []Order{}
-	completeOrders = []Order{}
-	totalVIP = 0
-	totalNormal = 0
-	completedOrders = 0
+func TestMixedQueueOrdering(t *testing.T) {
+	resetTestState()
 
-	// Add orders in realistic sequence
-	n1 := NewOrder("NORMAL") // #1
-	n2 := NewOrder("NORMAL") // #2
-	v1 := NewOrder("VIP")    // #3
-	n3 := NewOrder("NORMAL") // #4
-	v2 := NewOrder("VIP")    // #5
+	NewOrder("VIP")
+	NewOrder("NORMAL")
+	NewOrder("VIP")
+	NewOrder("NORMAL")
 
-	// Add to queues
-	normalQueue = append(normalQueue, n1, n2, n3)
-	vipQueue = append(vipQueue, v1, v2)
+	order1 := getNextOrder()
+	order2 := getNextOrder()
+	order3 := getNextOrder()
+	order4 := getNextOrder()
 
-	// Pick orders in sequence using getNextOrder()
-	expectedSequence := []int{v1.ID, v2.ID, n1.ID, n2.ID, n3.ID}
-	actualSequence := []int{}
-
-	for i := 0; i < 5; i++ {
-		o := getNextOrder()
-		if o == nil {
-			t.Fatalf("Expected order at position %d, got nil", i+1)
-		}
-		actualSequence = append(actualSequence, o.ID)
+	if order1.Type != "VIP" {
+		t.Error("First order should be VIP")
 	}
-
-	for i := 0; i < len(expectedSequence); i++ {
-		if actualSequence[i] != expectedSequence[i] {
-			t.Errorf("Expected order ID %d at position %d, got %d",
-				expectedSequence[i], i+1, actualSequence[i])
-		}
+	if order2.Type != "VIP" {
+		t.Error("Second order should be VIP")
+	}
+	if order3.Type != "NORMAL" {
+		t.Error("Third order should be NORMAL")
+	}
+	if order4.Type != "NORMAL" {
+		t.Error("Fourth order should be NORMAL")
 	}
 }

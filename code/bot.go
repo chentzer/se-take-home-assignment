@@ -1,35 +1,24 @@
 package main
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type Bot struct {
 	ID           int
-	busy         bool
+	busy         int32
 	CurrentOrder *Order
-	stopChan     chan bool
+	stopChan     chan struct{}
+	stopOnce     sync.Once
 }
 
-func NewBot() *Bot {
+func NewBot(id int) *Bot {
 	return &Bot{
-		ID:       len(bots) + 1,
-		stopChan: make(chan bool),
+		ID:       id,
+		stopChan: make(chan struct{}),
 	}
-}
-
-func getNextOrder() *Order {
-	if len(vipQueue) > 0 {
-		order := vipQueue[0]
-		vipQueue = vipQueue[1:]
-		return &order
-	}
-	if len(normalQueue) > 0 {
-		order := normalQueue[0]
-		normalQueue = normalQueue[1:]
-		return &order
-	}
-	return nil
 }
 
 func (b *Bot) start() {
@@ -40,72 +29,85 @@ func (b *Bot) start() {
 				log("Bot #%d stopped", b.ID)
 				return
 			default:
-				order := getNextOrder()
-				if order == nil {
-					time.Sleep(1 * time.Second)
-					continue
-				}
+			}
 
-				b.busy = true
-				b.CurrentOrder = order
-				log("Bot #%d picked up %s Order #%d - Status: PROCESSING", b.ID, order.Type, order.ID)
+			order := getNextOrder()
+			if order == nil {
+				time.Sleep(200 * time.Millisecond)
+				continue
+			}
 
-				select {
-				case <-time.After(10 * time.Second):
-					// Only complete if stopChan is not triggered
-					completeOrders = append(completeOrders, *order)
-					log("Bot #%d completed %s Order #%d - Status: COMPLETE (Processing time: 10s)", b.ID, order.Type, order.ID)
-					b.busy = false
-					b.CurrentOrder = nil
-				case <-b.stopChan:
-					// Immediately return order to queue
-					log("Bot #%d destroyed while processing %s Order #%d - returning order to queue", b.ID, order.Type, order.ID)
-					if order.Type == "VIP" {
-						vipQueue = append([]Order{*order}, vipQueue...)
-					} else {
-						normalQueue = append([]Order{*order}, normalQueue...)
-					}
-					b.busy = false
-					b.CurrentOrder = nil
-					return
-				}
+			if !atomic.CompareAndSwapInt32(&b.busy, 0, 1) {
+				returnOrderToQueue(order)
+				continue
+			}
+
+			b.CurrentOrder = order
+
+			log("Bot #%d picked up %s Order #%d - Status: PROCESSING", b.ID, order.Type, order.ID)
+
+			processed := b.processOrder(order)
+
+			atomic.StoreInt32(&b.busy, 0)
+			b.CurrentOrder = nil
+
+			if !processed {
+				return
 			}
 		}
 	}()
 }
 
-func addBot() {
-	bot := &Bot{
-		ID:       len(bots) + 1,
-		stopChan: make(chan bool),
+func (b *Bot) processOrder(order *Order) bool {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	select {
+	case <-ticker.C:
+		mu.Lock()
+		completedOrders++
+		completeOrders = append(completeOrders, order)
+		mu.Unlock()
+
+		log("Bot #%d completed %s Order #%d - Status: COMPLETE (Processing time: 10s)",
+			b.ID, order.Type, order.ID)
+		return true
+
+	case <-b.stopChan:
+		returnOrderToQueue(order)
+		log("Bot #%d destroyed while processing %s Order #%d - returning to queue",
+			b.ID, order.Type, order.ID)
+		return false
 	}
+}
+
+func addBot() {
+	mu.Lock()
+	newID := len(bots) + 1
+	bot := NewBot(newID)
 	bots = append(bots, bot)
+	mu.Unlock()
+
 	bot.start()
+
 	log("Bot #%d created - Status: ACTIVE", bot.ID)
 }
 
 func removeBot() {
+	mu.Lock()
 	if len(bots) == 0 {
+		mu.Unlock()
 		log("No bots to remove")
 		return
 	}
 
-	// Remove the newest bot
 	bot := bots[len(bots)-1]
 	bots = bots[:len(bots)-1]
+	mu.Unlock()
 
-	if bot.busy && bot.CurrentOrder != nil {
-		log("Bot #%d removed while processing %s Order #%d", bot.ID, bot.CurrentOrder.Type, bot.CurrentOrder.ID)
-		// Put order back to the front of the appropriate queue
-		if bot.CurrentOrder.Type == "VIP" {
-			vipQueue = append([]Order{*bot.CurrentOrder}, vipQueue...)
-		} else {
-			normalQueue = append([]Order{*bot.CurrentOrder}, normalQueue...)
-		}
-	} else {
-		log("Bot #%d removed while IDLE", bot.ID)
-	}
+	bot.stopOnce.Do(func() {
+		close(bot.stopChan)
+	})
 
-	// Signal bot to stop
-	close(bot.stopChan)
+	log("Bot #%d removed - Status: INACTIVE", bot.ID)
 }
