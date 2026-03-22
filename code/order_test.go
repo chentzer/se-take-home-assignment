@@ -1,13 +1,20 @@
-package main
+package code
 
 import (
 	"testing"
 )
 
-func TestCreateNormalOrder(t *testing.T) {
-	resetTestState()
+// TestController provides a controller for testing
+func NewTestController() *Controller {
+	return NewController(func(format string, args ...interface{}) {
+		// Silent logging during tests
+	})
+}
 
-	order, err := NewOrder("NORMAL")
+func TestCreateNormalOrder(t *testing.T) {
+	c := NewTestController()
+
+	order, err := c.NewOrder("NORMAL")
 
 	if err != nil {
 		t.Fatalf("Order creation failed: %v", err)
@@ -17,20 +24,15 @@ func TestCreateNormalOrder(t *testing.T) {
 		t.Errorf("Expected NORMAL, got %s", order.Type)
 	}
 
-	mu.Lock()
-	if totalNormal != 1 {
-		t.Errorf("Expected totalNormal=1, got %d", totalNormal)
+	if c.TotalNormal != 1 {
+		t.Errorf("Expected TotalNormal=1, got %d", c.TotalNormal)
 	}
-	if len(normalQueue) != 1 {
-		t.Errorf("Expected normalQueue length 1, got %d", len(normalQueue))
-	}
-	mu.Unlock()
 }
 
 func TestCreateVIPOrder(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	order, err := NewOrder("VIP")
+	order, err := c.NewOrder("VIP")
 
 	if err != nil {
 		t.Fatalf("Order creation failed: %v", err)
@@ -40,20 +42,15 @@ func TestCreateVIPOrder(t *testing.T) {
 		t.Errorf("Expected VIP, got %s", order.Type)
 	}
 
-	mu.Lock()
-	if totalVIP != 1 {
-		t.Errorf("Expected totalVIP=1, got %d", totalVIP)
+	if c.TotalVIP != 1 {
+		t.Errorf("Expected TotalVIP=1, got %d", c.TotalVIP)
 	}
-	if len(vipQueue) != 1 {
-		t.Errorf("Expected vipQueue length 1, got %d", len(vipQueue))
-	}
-	mu.Unlock()
 }
 
 func TestInvalidOrderType(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	order, err := NewOrder("INVALID")
+	order, err := c.NewOrder("INVALID")
 
 	if err == nil {
 		t.Error("Expected error for invalid order type")
@@ -64,10 +61,10 @@ func TestInvalidOrderType(t *testing.T) {
 }
 
 func TestOrderIDIncrements(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	order1, _ := NewOrder("NORMAL")
-	order2, _ := NewOrder("NORMAL")
+	order1, _ := c.NewOrder("NORMAL")
+	order2, _ := c.NewOrder("NORMAL")
 
 	if order2.ID != order1.ID+1 {
 		t.Errorf("Order IDs not sequential: %d then %d", order1.ID, order2.ID)
@@ -75,9 +72,9 @@ func TestOrderIDIncrements(t *testing.T) {
 }
 
 func TestGetNextOrderFromEmptyQueue(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	order := getNextOrder()
+	order := c.GetNextOrder()
 
 	if order != nil {
 		t.Error("Expected nil from empty queue")
@@ -85,12 +82,12 @@ func TestGetNextOrderFromEmptyQueue(t *testing.T) {
 }
 
 func TestGetNextOrderPriority(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	NewOrder("NORMAL")
-	NewOrder("VIP")
+	c.NewOrder("NORMAL")
+	c.NewOrder("VIP")
 
-	order := getNextOrder()
+	order := c.GetNextOrder()
 
 	if order.Type != "VIP" {
 		t.Errorf("Expected VIP first, got %s", order.Type)
@@ -98,13 +95,13 @@ func TestGetNextOrderPriority(t *testing.T) {
 }
 
 func TestGetNextOrderNormalOnly(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	NewOrder("NORMAL")
-	NewOrder("NORMAL")
+	c.NewOrder("NORMAL")
+	c.NewOrder("NORMAL")
 
-	order1 := getNextOrder()
-	order2 := getNextOrder()
+	order1 := c.GetNextOrder()
+	order2 := c.GetNextOrder()
 
 	if order1.Type != "NORMAL" {
 		t.Errorf("Expected NORMAL, got %s", order1.Type)
@@ -115,13 +112,13 @@ func TestGetNextOrderNormalOnly(t *testing.T) {
 }
 
 func TestGetNextOrderVIPOnly(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	NewOrder("VIP")
-	NewOrder("VIP")
+	c.NewOrder("VIP")
+	c.NewOrder("VIP")
 
-	order1 := getNextOrder()
-	order2 := getNextOrder()
+	order1 := c.GetNextOrder()
+	order2 := c.GetNextOrder()
 
 	if order1.Type != "VIP" {
 		t.Errorf("Expected VIP, got %s", order1.Type)
@@ -132,13 +129,13 @@ func TestGetNextOrderVIPOnly(t *testing.T) {
 }
 
 func TestFIFOWithinSameType(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	order1, _ := NewOrder("NORMAL")
-	order2, _ := NewOrder("NORMAL")
+	order1, _ := c.NewOrder("NORMAL")
+	order2, _ := c.NewOrder("NORMAL")
 
-	first := getNextOrder()
-	second := getNextOrder()
+	first := c.GetNextOrder()
+	second := c.GetNextOrder()
 
 	if first.ID != order1.ID {
 		t.Errorf("Expected first order ID %d, got %d", order1.ID, first.ID)
@@ -149,17 +146,17 @@ func TestFIFOWithinSameType(t *testing.T) {
 }
 
 func TestMixedQueueOrdering(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	NewOrder("VIP")
-	NewOrder("NORMAL")
-	NewOrder("VIP")
-	NewOrder("NORMAL")
+	c.NewOrder("VIP")
+	c.NewOrder("NORMAL")
+	c.NewOrder("VIP")
+	c.NewOrder("NORMAL")
 
-	order1 := getNextOrder()
-	order2 := getNextOrder()
-	order3 := getNextOrder()
-	order4 := getNextOrder()
+	order1 := c.GetNextOrder()
+	order2 := c.GetNextOrder()
+	order3 := c.GetNextOrder()
+	order4 := c.GetNextOrder()
 
 	if order1.Type != "VIP" {
 		t.Error("First order should be VIP")

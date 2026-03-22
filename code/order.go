@@ -1,14 +1,16 @@
-package main
+package code
 
 import (
 	"errors"
+	"sync"
 	"time"
 )
 
+// Order represents a customer order
 type Order struct {
 	ID        int
 	Type      string
-	CreatedAt time.Time // Track creation time for ordering
+	CreatedAt time.Time
 }
 
 const (
@@ -16,6 +18,7 @@ const (
 	OrderTypeVIP    = "VIP"
 )
 
+// ValidateOrderType checks if the order type is valid
 func ValidateOrderType(orderType string) error {
 	if orderType != OrderTypeNormal && orderType != OrderTypeVIP {
 		return errors.New("invalid order type: " + orderType)
@@ -23,82 +26,138 @@ func ValidateOrderType(orderType string) error {
 	return nil
 }
 
-func NewOrder(orderType string) (*Order, error) {
+// Controller manages the order system state
+type Controller struct {
+	mu sync.Mutex
+
+	vipQueue       []*Order
+	normalQueue    []*Order
+	CompleteOrders []*Order
+
+	Bots []*Bot
+
+	orderID         int
+	TotalVIP        int
+	TotalNormal     int
+	CompletedOrders int
+
+	LogFunc func(format string, args ...interface{})
+}
+
+// NewController creates a new order controller
+func NewController(logFunc func(format string, args ...interface{})) *Controller {
+	return &Controller{
+		vipQueue:       []*Order{},
+		normalQueue:    []*Order{},
+		CompleteOrders: []*Order{},
+		Bots:           []*Bot{},
+		orderID:        1,
+		LogFunc:        logFunc,
+	}
+}
+
+// NewOrder creates a new order and adds it to the appropriate queue
+func (c *Controller) NewOrder(orderType string) (*Order, error) {
 	if err := ValidateOrderType(orderType); err != nil {
 		return nil, err
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	order := &Order{
-		ID:        orderID,
+		ID:        c.orderID,
 		Type:      orderType,
 		CreatedAt: time.Now(),
 	}
-	orderID++
+	c.orderID++
 
 	if orderType == OrderTypeVIP {
-		totalVIP++
-		vipQueue = append(vipQueue, order)
+		c.TotalVIP++
+		c.vipQueue = append(c.vipQueue, order)
 	} else {
-		totalNormal++
-		normalQueue = append(normalQueue, order)
+		c.TotalNormal++
+		c.normalQueue = append(c.normalQueue, order)
 	}
 
 	return order, nil
 }
 
-func getNextOrder() *Order {
-	mu.Lock()
-	defer mu.Unlock()
+// GetNextOrder returns the next order to process (VIP first, then normal)
+func (c *Controller) GetNextOrder() *Order {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// VIP orders have priority
-	if len(vipQueue) > 0 {
-		order := vipQueue[0]
-		vipQueue = vipQueue[1:]
+	if len(c.vipQueue) > 0 {
+		order := c.vipQueue[0]
+		c.vipQueue = c.vipQueue[1:]
 		return order
 	}
 
 	// Then normal orders
-	if len(normalQueue) > 0 {
-		order := normalQueue[0]
-		normalQueue = normalQueue[1:]
+	if len(c.normalQueue) > 0 {
+		order := c.normalQueue[0]
+		c.normalQueue = c.normalQueue[1:]
 		return order
 	}
 
 	return nil
 }
 
-// Return order to its original position maintaining priority and FIFO
-func returnOrderToQueue(order *Order) {
-	mu.Lock()
-	defer mu.Unlock()
+// ReturnOrderToQueue returns an order to its original position maintaining priority and FIFO
+func (c *Controller) ReturnOrderToQueue(order *Order) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if order.Type == OrderTypeVIP {
-		// Find the correct position based on creation time
 		insertIndex := 0
-		for i, existingOrder := range vipQueue {
+		for i, existingOrder := range c.vipQueue {
 			if existingOrder.CreatedAt.After(order.CreatedAt) {
 				insertIndex = i
 				break
 			}
 			insertIndex = i + 1
 		}
-
-		// Insert at correct position
-		vipQueue = append(vipQueue[:insertIndex], append([]*Order{order}, vipQueue[insertIndex:]...)...)
+		c.vipQueue = append(c.vipQueue[:insertIndex], append([]*Order{order}, c.vipQueue[insertIndex:]...)...)
 	} else {
-		// Find correct position for normal orders
 		insertIndex := 0
-		for i, existingOrder := range normalQueue {
+		for i, existingOrder := range c.normalQueue {
 			if existingOrder.CreatedAt.After(order.CreatedAt) {
 				insertIndex = i
 				break
 			}
 			insertIndex = i + 1
 		}
+		c.normalQueue = append(c.normalQueue[:insertIndex], append([]*Order{order}, c.normalQueue[insertIndex:]...)...)
+	}
+}
 
-		normalQueue = append(normalQueue[:insertIndex], append([]*Order{order}, normalQueue[insertIndex:]...)...)
+// CompleteOrder marks an order as completed
+func (c *Controller) CompleteOrder(order *Order) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.CompletedOrders++
+	c.CompleteOrders = append(c.CompleteOrders, order)
+}
+
+// GetPendingCount returns the number of pending orders
+func (c *Controller) GetPendingCount() (vip, normal int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.vipQueue), len(c.normalQueue)
+}
+
+// GetStats returns current system statistics
+func (c *Controller) GetStats() (totalVIP, totalNormal, completed, pendingVIP, pendingNormal, activeBots int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.TotalVIP, c.TotalNormal, c.CompletedOrders, len(c.vipQueue), len(c.normalQueue), len(c.Bots)
+}
+
+// Log calls the log function if set
+func (c *Controller) Log(format string, args ...interface{}) {
+	if c.LogFunc != nil {
+		c.LogFunc(format, args...)
 	}
 }

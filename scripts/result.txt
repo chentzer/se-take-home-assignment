@@ -1,28 +1,28 @@
-[02:49:35] McDonald's Order Management System - Demo Mode Started
-[02:49:35] System initialized with 0 bots
-[02:49:35] Command: normal
-[02:49:35] Created Normal Order #1 - Status: PENDING
-[02:49:35] Command: vip
-[02:49:35] Created VIP Order #2 - Status: PENDING
-[02:49:35] Command: normal
-[02:49:35] Created Normal Order #3 - Status: PENDING
-[02:49:35] Command: addbot
-[02:49:35] Bot #1 created - Status: ACTIVE
-[02:49:35] Bot #1 picked up VIP Order #2 - Status: PROCESSING
-[02:49:35] Command: addbot
-[02:49:35] Bot #2 created - Status: ACTIVE
-[02:49:35] Bot #2 picked up NORMAL Order #1 - Status: PROCESSING
-[02:49:36] Command: status
-[02:49:38] Command: status
-[02:49:45] Bot #1 completed VIP Order #2 - Status: COMPLETE (Processing time: 10s)
-[02:49:45] Bot #1 picked up NORMAL Order #3 - Status: PROCESSING
-[02:49:46] Bot #2 completed NORMAL Order #1 - Status: COMPLETE (Processing time: 10s)
-[02:49:50] Command: removebot
-[02:49:50] Bot #2 removed - Status: INACTIVE
-[02:49:50] Bot #2 stopped
-[02:49:50] Command: status
-[02:49:50] Command: exit
-[02:49:50] Exit command received
-[02:49:50] Initiating graceful shutdown...
-[02:49:50] Bot #1 destroyed while processing NORMAL Order #3 - returning to queue
-[02:49:52] System shutdown complete
+[04:11:30] McDonald's Order Management System - Demo Mode Started
+[04:11:30] System initialized with 0 bots
+[04:11:30] Command: normal
+[04:11:30] Created Normal Order #1 - Status: PENDING
+[04:11:30] Command: vip
+[04:11:30] Created VIP Order #2 - Status: PENDING
+[04:11:30] Command: normal
+[04:11:30] Created Normal Order #3 - Status: PENDING
+[04:11:30] Command: addbot
+[04:11:30] Bot #1 picked up VIP Order #2 - Status: PROCESSING
+[04:11:30] Bot #1 created - Status: ACTIVE
+[04:11:30] Command: addbot
+[04:11:30] Bot #2 created - Status: ACTIVE
+[04:11:30] Bot #2 picked up NORMAL Order #1 - Status: PROCESSING
+[04:11:31] Command: status
+[04:11:33] Command: status
+[04:11:40] Bot #1 completed VIP Order #2 - Status: COMPLETE (Processing time: 10s)
+[04:11:40] Bot #1 picked up NORMAL Order #3 - Status: PROCESSING
+[04:11:40] Bot #2 completed NORMAL Order #1 - Status: COMPLETE (Processing time: 10s)
+[04:11:45] Command: removebot
+[04:11:45] Bot #2 removed - Status: INACTIVE
+[04:11:45] Command: status
+[04:11:45] Bot #2 stopped
+[04:11:45] Command: exit
+[04:11:45] Exit command received
+[04:11:45] Initiating graceful shutdown...
+[04:11:45] Bot #1 destroyed while processing NORMAL Order #3 - returning to queue
+[04:11:47] System shutdown complete

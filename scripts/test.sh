@@ -5,13 +5,10 @@
 
 echo "Running unit tests..."
 
-# Navigate to code directory
-cd "$(dirname "$0")/../code" || exit 1
+# Navigate to project root
+cd "$(dirname "$0")/.." || exit 1
 
-# For Go projects:
-go test ./... -v
-
-# For Node.js projects:
-# npm test
+# Run tests for the code package
+go test ./code/... -v
 
 echo "Unit tests completed"

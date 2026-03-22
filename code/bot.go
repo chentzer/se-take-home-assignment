@@ -1,4 +1,4 @@
-package main
+package code
 
 import (
 	"sync"
@@ -6,19 +6,23 @@ import (
 	"time"
 )
 
+// Bot represents a cooking bot
 type Bot struct {
 	ID           int
 	busy         int32
 	currentOrder *Order
-	orderMu      sync.Mutex // Protects currentOrder
+	orderMu      sync.Mutex
 	stopChan     chan struct{}
-	stopOnce     sync.Once
+	StopOnce     sync.Once
+	controller   *Controller
 }
 
-func NewBot(id int) *Bot {
+// NewBot creates a new bot
+func NewBot(id int, controller *Controller) *Bot {
 	return &Bot{
-		ID:       id,
-		stopChan: make(chan struct{}),
+		ID:         id,
+		stopChan:   make(chan struct{}),
+		controller: controller,
 	}
 }
 
@@ -36,30 +40,36 @@ func (b *Bot) SetCurrentOrder(order *Order) {
 	b.currentOrder = order
 }
 
-func (b *Bot) start() {
+// IsBusy returns whether the bot is currently processing an order
+func (b *Bot) IsBusy() bool {
+	return atomic.LoadInt32(&b.busy) == 1
+}
+
+// Start begins the bot's processing loop
+func (b *Bot) Start() {
 	go func() {
 		for {
 			select {
 			case <-b.stopChan:
-				log("Bot #%d stopped", b.ID)
+				b.controller.Log("Bot #%d stopped", b.ID)
 				return
 			default:
 			}
 
-			order := getNextOrder()
+			order := b.controller.GetNextOrder()
 			if order == nil {
 				time.Sleep(200 * time.Millisecond)
 				continue
 			}
 
 			if !atomic.CompareAndSwapInt32(&b.busy, 0, 1) {
-				returnOrderToQueue(order)
+				b.controller.ReturnOrderToQueue(order)
 				continue
 			}
 
 			b.SetCurrentOrder(order)
 
-			log("Bot #%d picked up %s Order #%d - Status: PROCESSING", b.ID, order.Type, order.ID)
+			b.controller.Log("Bot #%d picked up %s Order #%d - Status: PROCESSING", b.ID, order.Type, order.ID)
 
 			processed := b.processOrder(order)
 
@@ -73,56 +83,73 @@ func (b *Bot) start() {
 	}()
 }
 
+// Stop stops the bot
+func (b *Bot) Stop() {
+	b.StopOnce.Do(func() {
+		close(b.stopChan)
+	})
+}
+
 func (b *Bot) processOrder(order *Order) bool {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	select {
 	case <-ticker.C:
-		mu.Lock()
-		completedOrders++
-		completeOrders = append(completeOrders, order)
-		mu.Unlock()
-
-		log("Bot #%d completed %s Order #%d - Status: COMPLETE (Processing time: 10s)",
+		b.controller.CompleteOrder(order)
+		b.controller.Log("Bot #%d completed %s Order #%d - Status: COMPLETE (Processing time: 10s)",
 			b.ID, order.Type, order.ID)
 		return true
 
 	case <-b.stopChan:
-		returnOrderToQueue(order)
-		log("Bot #%d destroyed while processing %s Order #%d - returning to queue",
+		b.controller.ReturnOrderToQueue(order)
+		b.controller.Log("Bot #%d destroyed while processing %s Order #%d - returning to queue",
 			b.ID, order.Type, order.ID)
 		return false
 	}
 }
 
-func addBot() {
-	mu.Lock()
-	newID := len(bots) + 1
-	bot := NewBot(newID)
-	bots = append(bots, bot)
-	mu.Unlock()
+// AddBot creates and starts a new bot
+func (c *Controller) AddBot() *Bot {
+	c.mu.Lock()
+	newID := len(c.Bots) + 1
+	bot := NewBot(newID, c)
+	c.Bots = append(c.Bots, bot)
+	c.mu.Unlock()
 
-	bot.start()
+	bot.Start()
 
-	log("Bot #%d created - Status: ACTIVE", bot.ID)
+	c.Log("Bot #%d created - Status: ACTIVE", bot.ID)
+	return bot
 }
 
-func removeBot() {
-	mu.Lock()
-	if len(bots) == 0 {
-		mu.Unlock()
-		log("No bots to remove")
+// RemoveBot removes and stops the newest bot
+func (c *Controller) RemoveBot() {
+	c.mu.Lock()
+	if len(c.Bots) == 0 {
+		c.mu.Unlock()
+		c.Log("No bots to remove")
 		return
 	}
 
-	bot := bots[len(bots)-1]
-	bots = bots[:len(bots)-1]
-	mu.Unlock()
+	bot := c.Bots[len(c.Bots)-1]
+	c.Bots = c.Bots[:len(c.Bots)-1]
+	c.mu.Unlock()
 
-	bot.stopOnce.Do(func() {
-		close(bot.stopChan)
-	})
+	bot.Stop()
 
-	log("Bot #%d removed - Status: INACTIVE", bot.ID)
+	c.Log("Bot #%d removed - Status: INACTIVE", bot.ID)
+}
+
+// StopAllBots stops all bots gracefully
+func (c *Controller) StopAllBots() {
+	c.mu.Lock()
+	botsToStop := make([]*Bot, len(c.Bots))
+	copy(botsToStop, c.Bots)
+	c.Bots = []*Bot{}
+	c.mu.Unlock()
+
+	for _, bot := range botsToStop {
+		bot.Stop()
+	}
 }

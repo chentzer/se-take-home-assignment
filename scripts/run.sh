@@ -2,8 +2,8 @@
 
 echo "Running CLI application..."
 
-# Navigate to code directory
-cd "$(dirname "$0")/../code" || exit 1
+# Navigate to cmd directory
+cd "$(dirname "$0")/../cmd" || exit 1
 
 # Clear previous results
 > ../scripts/result.txt

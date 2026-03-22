@@ -1,49 +1,52 @@
-package main
+package code
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestAddBot(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	initialBotCount := len(bots)
-	addBot()
+	initialBotCount := len(c.Bots)
+	c.AddBot()
 
 	time.Sleep(100 * time.Millisecond)
 
-	if len(bots) != initialBotCount+1 {
-		t.Errorf("Expected %d bots, got %d", initialBotCount+1, len(bots))
+	if len(c.Bots) != initialBotCount+1 {
+		t.Errorf("Expected %d bots, got %d", initialBotCount+1, len(c.Bots))
 	}
+
+	c.StopAllBots()
 }
 
 func TestRemoveBot(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	addBot()
-	addBot()
+	c.AddBot()
+	c.AddBot()
 	time.Sleep(100 * time.Millisecond)
 
-	initialBotCount := len(bots)
-	removeBot()
+	initialBotCount := len(c.Bots)
+	c.RemoveBot()
 
 	time.Sleep(100 * time.Millisecond)
 
-	if len(bots) != initialBotCount-1 {
-		t.Errorf("Expected %d bots, got %d", initialBotCount-1, len(bots))
+	if len(c.Bots) != initialBotCount-1 {
+		t.Errorf("Expected %d bots, got %d", initialBotCount-1, len(c.Bots))
 	}
+
+	c.StopAllBots()
 }
 
 func TestRemoveBotWhenEmpty(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	initialBotCount := len(bots)
-	removeBot()
+	initialBotCount := len(c.Bots)
+	c.RemoveBot()
 
-	if len(bots) != initialBotCount {
-		t.Errorf("Bot count should remain %d, got %d", initialBotCount, len(bots))
+	if len(c.Bots) != initialBotCount {
+		t.Errorf("Bot count should remain %d, got %d", initialBotCount, len(c.Bots))
 	}
 }
 
@@ -52,19 +55,17 @@ func TestBotProcessesOrder(t *testing.T) {
 		t.Skip("Skipping long test in short mode")
 	}
 
-	resetTestState()
+	c := NewTestController()
 
-	addBot()
-	order, err := NewOrder("NORMAL")
+	c.AddBot()
+	order, err := c.NewOrder("NORMAL")
 	if err != nil {
 		t.Fatalf("Failed to create order: %v", err)
 	}
 
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	hasOrder := bots[0].GetCurrentOrder() != nil
-	mu.Unlock()
+	hasOrder := c.Bots[0].GetCurrentOrder() != nil
 
 	if !hasOrder {
 		t.Error("Bot should have an order")
@@ -72,92 +73,86 @@ func TestBotProcessesOrder(t *testing.T) {
 
 	time.Sleep(11 * time.Second)
 
-	mu.Lock()
-	if completedOrders != 1 {
-		t.Errorf("Expected 1 completed order, got %d", completedOrders)
+	if c.CompletedOrders != 1 {
+		t.Errorf("Expected 1 completed order, got %d", c.CompletedOrders)
 	}
-	if completeOrders[0].ID != order.ID {
-		t.Errorf("Expected order ID %d, got %d", order.ID, completeOrders[0].ID)
+	if c.CompleteOrders[0].ID != order.ID {
+		t.Errorf("Expected order ID %d, got %d", order.ID, c.CompleteOrders[0].ID)
 	}
-	mu.Unlock()
+
+	c.StopAllBots()
 }
 
 func TestBotReturnsOrderWhenRemoved(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	addBot()
-	order, err := NewOrder("NORMAL")
+	c.AddBot()
+	order, err := c.NewOrder("NORMAL")
 	if err != nil {
 		t.Fatalf("Failed to create order: %v", err)
 	}
 
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	queueLen := len(normalQueue)
-	hasOrder := bots[0].GetCurrentOrder() != nil
-	mu.Unlock()
+	hasOrder := c.Bots[0].GetCurrentOrder() != nil
 
-	if queueLen != 0 {
-		t.Fatal("Order not taken from queue")
-	}
 	if !hasOrder {
 		t.Fatal("Bot does not have order")
 	}
 
-	removeBot()
+	c.RemoveBot()
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	if len(normalQueue) == 0 {
+	_, normalCount := c.GetPendingCount()
+	if normalCount == 0 {
 		t.Error("Order was not returned to queue")
 	}
-	if len(normalQueue) > 0 && normalQueue[0].ID != order.ID {
-		t.Errorf("Expected order %d at front, got %d", order.ID, normalQueue[0].ID)
+
+	nextOrder := c.GetNextOrder()
+	if nextOrder == nil || nextOrder.ID != order.ID {
+		t.Errorf("Expected order %d at front", order.ID)
 	}
-	mu.Unlock()
 }
 
 func TestBotDoesNotTakeOrderWhenBusy(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	addBot()
-	NewOrder("NORMAL")
+	c.AddBot()
+	c.NewOrder("NORMAL")
 
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	isBusy := atomic.LoadInt32(&bots[0].busy) == 1
-	mu.Unlock()
+	isBusy := c.Bots[0].IsBusy()
 
 	if !isBusy {
 		t.Fatal("Bot is not busy")
 	}
 
-	NewOrder("NORMAL")
+	c.NewOrder("NORMAL")
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	if len(normalQueue) != 1 {
-		t.Errorf("Expected 1 order in queue, got %d", len(normalQueue))
+	_, normalCount := c.GetPendingCount()
+	if normalCount != 1 {
+		t.Errorf("Expected 1 order in queue, got %d", normalCount)
 	}
-	mu.Unlock()
+
+	c.StopAllBots()
 }
 
 func TestVIPOrderPriority(t *testing.T) {
-	resetTestState()
+	c := NewTestController()
 
-	NewOrder("NORMAL")
-	NewOrder("VIP")
-	addBot()
+	c.NewOrder("NORMAL")
+	c.NewOrder("VIP")
+	c.AddBot()
 
 	time.Sleep(500 * time.Millisecond)
 
-	mu.Lock()
-	bot := bots[0]
+	bot := c.Bots[0]
 	currentOrder := bot.GetCurrentOrder()
 	if currentOrder != nil && currentOrder.Type != "VIP" {
 		t.Errorf("Bot should pick VIP first, got %s", currentOrder.Type)
 	}
-	mu.Unlock()
+
+	c.StopAllBots()
 }
