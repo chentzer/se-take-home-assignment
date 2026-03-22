@@ -1,5 +1,5 @@
-[19:40:06] McDonald's Order Management System - Simulation Started
-[19:40:06] System initialized with 0 bots
+[20:04:54] McDonald's Order Management System - Simulation Started
+[20:04:54] System initialized with 0 bots
 
 Available Commands:
   normal    - Add a normal order
@@ -10,43 +10,65 @@ Available Commands:
   help      - Show this help message
   exit      - Shutdown the system
 
-> [19:40:06] Created Normal Order #1 - Status: PENDING
-> [19:40:06] Created VIP Order #2 - Status: PENDING
-> [19:40:06] Bot #1 created - Status: ACTIVE
-> [19:40:06] Bot #1 picked up VIP Order #2 - Status: PROCESSING
-
+> [20:04:54] Created Normal Order #1 - Status: PENDING
+> [20:04:54] Created Normal Order #2 - Status: PENDING
+> [20:04:54] Created VIP Order #3 - Status: PENDING
+> [20:04:54] Created VIP Order #4 - Status: PENDING
+> 
 ╔════════════════════════════════════════╗
 ║     MCDONALD'S ORDER STATUS           ║
 ╠════════════════════════════════════════╣
-║ Total Orders Created:  2                    ║
-║   ├─ VIP Orders:        1                    ║
-║   └─ Normal Orders:     1                    ║
+║ Total Orders Created:  4                    ║
+║   ├─ VIP Orders:        2                    ║
+║   └─ Normal Orders:     2                    ║
 ║ Orders Completed:       0                    ║
-║ Orders Pending:         1                    ║
-║   ├─ VIP Queue:         0                    ║
-║   └─ Normal Queue:      1                    ║
-║ Active Bots:            1                    ║
+║ Orders Pending:         4                    ║
+║   ├─ VIP Queue:         2                    ║
+║   └─ Normal Queue:      2                    ║
+║ Active Bots:            0                    ║
 ║ Completion Rate:        0.0                 % ║
 ╚════════════════════════════════════════╝
-> [19:40:16] Bot #1 completed VIP Order #2 - Status: COMPLETE (Processing time: 10s)
-[19:40:16] Bot #1 picked up NORMAL Order #1 - Status: PROCESSING
-
+> [20:04:54] Bot #1 created - Status: ACTIVE
+> [20:04:54] Bot #2 created - Status: ACTIVE
+> 
 ╔════════════════════════════════════════╗
 ║     MCDONALD'S ORDER STATUS           ║
 ╠════════════════════════════════════════╣
-║ Total Orders Created:  2                    ║
-║   ├─ VIP Orders:        1                    ║
-║   └─ Normal Orders:     1                    ║
-║ Orders Completed:       1                    ║
-║ Orders Pending:         0                    ║
-║   ├─ VIP Queue:         0                    ║
-║   └─ Normal Queue:      0                    ║
-║ Active Bots:            1                    ║
-║ Completion Rate:        50.0                % ║
+║ Total Orders Created:  4                    ║
+║   ├─ VIP Orders:        2                    ║
+║   └─ Normal Orders:     2                    ║
+║ Orders Completed:       0                    ║
+║ Orders Pending:         3                    ║
+║   ├─ VIP Queue:         1                    ║
+║   └─ Normal Queue:      2                    ║
+║ Active Bots:            2                    ║
+║ Completion Rate:        0.0                 % ║
 ╚════════════════════════════════════════╝
-> [19:40:20] Exit command received
-[19:40:20] Initiating graceful shutdown...
-[19:40:20] Bot #1 destroyed while processing NORMAL Order #1 - returning to queue
-[19:40:22] System shutdown complete
-ocessing NORMAL Order #1 - returning to queue
-[19:40:22] System shutdown complete
+> [20:04:54] Bot #2 removed - Status: INACTIVE
+> [20:04:54] Created Normal Order #5 - Status: PENDING
+> [20:04:54] Created VIP Order #6 - Status: PENDING
+> [20:04:54] Bot #2 created - Status: ACTIVE
+> 
+╔════════════════════════════════════════╗
+║     MCDONALD'S ORDER STATUS           ║
+╠════════════════════════════════════════╣
+║ Total Orders Created:  6                    ║
+║   ├─ VIP Orders:        3                    ║
+║   └─ Normal Orders:     3                    ║
+║ Orders Completed:       0                    ║
+║ Orders Pending:         5                    ║
+║   ├─ VIP Queue:         2                    ║
+║   └─ Normal Queue:      3                    ║
+║ Active Bots:            2                    ║
+[20:04:54] Bot #1 picked up VIP Order #3 - Status: PROCESSING
+║ Completion Rate:        0.0                 % ║
+╚════════════════════════════════════════╝
+> [20:04:54] Exit command received
+[20:04:54] Initiating graceful shutdown...
+[20:04:54] Bot #1 destroyed while processing VIP Order #3 - returning to queue
+[20:04:54] Bot #2 stopped
+[20:04:54] Bot #2 picked up VIP Order #4 - Status: PROCESSING
+[20:04:54] Bot #2 destroyed while processing VIP Order #4 - returning to queue
+[20:04:56] System shutdown complete
+ocessing VIP Order #4 - returning to queue
+[20:04:56] System shutdown complete

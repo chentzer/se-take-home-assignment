@@ -8,7 +8,7 @@ import (
 type Order struct {
 	ID        int
 	Type      string
-	CreatedAt time.Time
+	CreatedAt time.Time // Track creation time for ordering
 }
 
 const (
@@ -53,12 +53,14 @@ func getNextOrder() *Order {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// VIP orders have priority
 	if len(vipQueue) > 0 {
 		order := vipQueue[0]
 		vipQueue = vipQueue[1:]
 		return order
 	}
 
+	// Then normal orders
 	if len(normalQueue) > 0 {
 		order := normalQueue[0]
 		normalQueue = normalQueue[1:]
@@ -68,11 +70,13 @@ func getNextOrder() *Order {
 	return nil
 }
 
+// Return order to its original position maintaining priority and FIFO
 func returnOrderToQueue(order *Order) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if order.Type == OrderTypeVIP {
+		// Find the correct position based on creation time
 		insertIndex := 0
 		for i, existingOrder := range vipQueue {
 			if existingOrder.CreatedAt.After(order.CreatedAt) {
@@ -81,8 +85,11 @@ func returnOrderToQueue(order *Order) {
 			}
 			insertIndex = i + 1
 		}
+
+		// Insert at correct position
 		vipQueue = append(vipQueue[:insertIndex], append([]*Order{order}, vipQueue[insertIndex:]...)...)
 	} else {
+		// Find correct position for normal orders
 		insertIndex := 0
 		for i, existingOrder := range normalQueue {
 			if existingOrder.CreatedAt.After(order.CreatedAt) {
@@ -91,6 +98,7 @@ func returnOrderToQueue(order *Order) {
 			}
 			insertIndex = i + 1
 		}
+
 		normalQueue = append(normalQueue[:insertIndex], append([]*Order{order}, normalQueue[insertIndex:]...)...)
 	}
 }
