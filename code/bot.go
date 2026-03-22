@@ -112,7 +112,8 @@ func (b *Bot) processOrder(order *Order) bool {
 // AddBot creates and starts a new bot
 func (c *Controller) AddBot() *Bot {
 	c.mu.Lock()
-	newID := len(c.Bots) + 1
+	newID := c.nextBotID
+	c.nextBotID++
 	bot := NewBot(newID, c)
 	c.Bots = append(c.Bots, bot)
 	c.mu.Unlock()

@@ -37,6 +37,7 @@ type Controller struct {
 	Bots []*Bot
 
 	orderID         int
+	nextBotID       int // Monotonically increasing bot ID
 	TotalVIP        int
 	TotalNormal     int
 	CompletedOrders int
@@ -52,6 +53,7 @@ func NewController(logFunc func(format string, args ...interface{})) *Controller
 		CompleteOrders: []*Order{},
 		Bots:           []*Bot{},
 		orderID:        1,
+		nextBotID:      1,
 		LogFunc:        logFunc,
 	}
 }

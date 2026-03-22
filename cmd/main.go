@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"se-take-home-assignment/code"
 	"sync"
 	"syscall"
 	"time"
-
-	"se-take-home-assignment/code"
 )
 
 var controller *code.Controller
@@ -151,6 +150,17 @@ func gracefulShutdown() {
 	controller.StopAllBots()
 	time.Sleep(2 * time.Second)
 	log("System shutdown complete")
+	closeLogFile()
+}
+
+func closeLogFile() {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	if logFile != nil {
+		logFile.Sync()
+		logFile.Close()
+		logFile = nil
+	}
 }
 
 func addNormalOrder() {
@@ -229,15 +239,16 @@ func log(format string, args ...interface{}) {
 	now := time.Now().Format("15:04:05")
 	line := fmt.Sprintf("[%s] %s\n", now, msg)
 
+	logMutex.Lock()
+	defer logMutex.Unlock()
+
 	fmt.Print(line)
 
 	if logFile != nil {
-		logMutex.Lock()
 		_, err := logFile.WriteString(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to write to log file: %v\n", err)
 		}
 		logFile.Sync()
-		logMutex.Unlock()
 	}
 }
