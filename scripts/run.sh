@@ -1,21 +1,25 @@
 #!/bin/bash
 
-# Run Script
 echo "Running CLI application..."
 
-cd "$(dirname "$0")/.." || exit 1
+# Navigate to code directory
+cd "$(dirname "$0")/../code" || exit 1
 
-echo "" > ./scripts/result.txt
+# Clear previous results
+echo "" > ../scripts/result.txt
 
-# Send commands to the binary
+# Run the CLI application with commands
 {
     echo "normal"
     echo "vip"
     echo "normal"
     echo "addbot"
     echo "addbot"
+    sleep 2
+    echo "status"
+    sleep 12
     echo "status"
     echo "exit"
-} | ./order-controller > ./scripts/result.txt 2>&1
+} | go run . > ../scripts/result.txt 2>&1
 
 echo "CLI application execution completed"
