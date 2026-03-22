@@ -13,14 +13,15 @@ import (
 	"time"
 )
 
-var controller *code.Controller
-var shutdownChan = make(chan struct{})
-var logFile *os.File
-var logMutex sync.Mutex
+// Global state
+var controller *code.Controller        // Central order and bot controller
+var shutdownChan = make(chan struct{}) // Signal channel for graceful shutdown
+var logFile *os.File                   // Output log file handle
+var logMutex sync.Mutex                // Protects concurrent log writes
 
 // Command line flags
-var demoMode bool
-var outputFile string
+var demoMode bool     // -demo: Run predefined demo sequence
+var outputFile string // -output: Custom log file path
 
 func main() {
 	flag.BoolVar(&demoMode, "demo", false, "Run in demo mode with predefined commands")
@@ -39,6 +40,7 @@ func main() {
 	runInteractiveMode()
 }
 
+// runInteractiveMode starts an interactive CLI session where users can type commands.
 func runInteractiveMode() {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -48,6 +50,7 @@ func runInteractiveMode() {
 	printHelp()
 
 	for {
+		// Check for shutdown signal
 		select {
 		case <-shutdownChan:
 			gracefulShutdown()
@@ -68,6 +71,8 @@ func runInteractiveMode() {
 	}
 }
 
+// runDemoMode executes a predefined sequence of commands to demonstrate functionality.
+// Used for CI/CD testing and automated verification.
 func runDemoMode() {
 	log("McDonald's Order Management System - Demo Mode Started")
 	log("System initialized with %d bots", len(controller.Bots))
@@ -99,6 +104,7 @@ func runDemoMode() {
 	}
 }
 
+// processCommand handles a single CLI command input.
 func processCommand(cmd string) {
 	switch cmd {
 	case "normal":
@@ -123,6 +129,7 @@ func processCommand(cmd string) {
 	}
 }
 
+// printHelp displays available commands to the user.
 func printHelp() {
 	fmt.Println("\nAvailable Commands:")
 	fmt.Println("  normal    - Add a normal order")
@@ -135,6 +142,8 @@ func printHelp() {
 	fmt.Println()
 }
 
+// setupGracefulShutdown listens for OS interrupt signals (Ctrl+C, SIGTERM)
+// and triggers graceful shutdown when received.
 func setupGracefulShutdown() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -146,14 +155,16 @@ func setupGracefulShutdown() {
 	}()
 }
 
+// gracefulShutdown stops all bots and closes resources cleanly.
 func gracefulShutdown() {
 	log("Initiating graceful shutdown...")
 	controller.StopAllBots()
-	time.Sleep(2 * time.Second)
+	time.Sleep(2 * time.Second) // Allow time for bots to return orders
 	log("System shutdown complete")
 	closeLogFile()
 }
 
+// closeLogFile safely closes the log file handle.
 func closeLogFile() {
 	logMutex.Lock()
 	defer logMutex.Unlock()
@@ -164,6 +175,7 @@ func closeLogFile() {
 	}
 }
 
+// addNormalOrder creates a new normal priority order.
 func addNormalOrder() {
 	order, err := controller.NewOrder("NORMAL")
 	if err != nil {
@@ -173,6 +185,7 @@ func addNormalOrder() {
 	log("Created Normal Order #%d - Status: PENDING", order.ID)
 }
 
+// addVIPOrder creates a new VIP priority order.
 func addVIPOrder() {
 	order, err := controller.NewOrder("VIP")
 	if err != nil {
@@ -182,6 +195,7 @@ func addVIPOrder() {
 	log("Created VIP Order #%d - Status: PENDING", order.ID)
 }
 
+// printStatus displays the current system status in a formatted table.
 func printStatus() {
 	totalVIP, totalNormal, completed, pendingVIP, pendingNormal, activeBots := controller.GetStats()
 	total := totalVIP + totalNormal
@@ -205,12 +219,16 @@ func printStatus() {
 	fmt.Println("╚════════════════════════════════════════╝")
 }
 
+// initLogFile initializes the log file for output.
+// It tries multiple paths: custom output flag, scripts directory, or fallback to current directory.
 func initLogFile() {
 	var logPath string
 
+	// Use custom output path if provided
 	if outputFile != "" {
 		logPath = outputFile
 	} else {
+		// Try to find scripts directory relative to executable
 		execPath, err := os.Executable()
 		if err == nil {
 			execDir := filepath.Dir(execPath)
@@ -220,14 +238,17 @@ func initLogFile() {
 			}
 		}
 
+		// Fallback to relative path
 		if logPath == "" {
 			logPath = filepath.Join("..", "scripts", "result.txt")
 		}
 	}
 
+	// Open log file (create or truncate)
 	var err error
 	logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
+		// Fallback to current directory
 		logFile, err = os.OpenFile("result.txt", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not open log file: %v\n", err)
@@ -236,6 +257,7 @@ func initLogFile() {
 	}
 }
 
+// log writes a timestamped message to both stdout and the log file.
 func log(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	now := time.Now().Format("15:04:05")

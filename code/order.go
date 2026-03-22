@@ -6,43 +6,37 @@ import (
 	"time"
 )
 
-// Order represents a customer order
+// Order represents a customer order with unique ID, type (VIP/NORMAL), and creation timestamp.
 type Order struct {
-	ID        int
-	Type      string
-	CreatedAt time.Time
+	ID        int       // Unique order identifier
+	Type      string    // Order type: "VIP" or "NORMAL"
+	CreatedAt time.Time // Timestamp for FIFO ordering within same priority
 }
 
+// Order type constants
 const (
 	OrderTypeNormal = "NORMAL"
 	OrderTypeVIP    = "VIP"
 )
 
-// ValidateOrderType checks if the order type is valid
-func ValidateOrderType(orderType string) error {
-	if orderType != OrderTypeNormal && orderType != OrderTypeVIP {
-		return errors.New("invalid order type: " + orderType)
-	}
-	return nil
-}
-
-// Controller manages the order system state
+// Controller manages the order system state including order queues and bot fleet.
+// It is the central coordinator between orders and bots, ensuring thread-safe operations.
 type Controller struct {
-	mu sync.Mutex
+	mu sync.Mutex // Protects all fields below
 
-	vipQueue       []*Order
-	normalQueue    []*Order
-	completeOrders []*Order
+	vipQueue       []*Order // Priority queue for VIP orders (processed first)
+	normalQueue    []*Order // Queue for normal orders (processed after VIP)
+	completeOrders []*Order // History of completed orders
 
-	Bots []*Bot
+	Bots []*Bot // Active bot fleet
 
-	orderID         int
-	nextBotID       int // Monotonically increasing bot ID
-	totalVIP        int
-	totalNormal     int
-	completedOrders int
+	orderID         int // Auto-incrementing order ID counter
+	nextBotID       int // Monotonically increasing bot ID (never reused)
+	totalVIP        int // Total VIP orders created (lifetime)
+	totalNormal     int // Total normal orders created (lifetime)
+	completedOrders int // Count of completed orders
 
-	LogFunc func(format string, args ...interface{})
+	LogFunc func(format string, args ...interface{}) // Optional logging callback
 }
 
 // NewController creates a new order controller
@@ -83,6 +77,14 @@ func (c *Controller) NewOrder(orderType string) (*Order, error) {
 	}
 
 	return order, nil
+}
+
+// ValidateOrderType checks if the order type is valid
+func ValidateOrderType(orderType string) error {
+	if orderType != OrderTypeNormal && orderType != OrderTypeVIP {
+		return errors.New("invalid order type: " + orderType)
+	}
+	return nil
 }
 
 // GetNextOrder returns the next order to process (VIP first, then normal)
