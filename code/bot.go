@@ -38,9 +38,8 @@ func (b *Bot) Start() {
 				continue
 			}
 
-			// Atomically try to claim the order (CAS: Compare-And-Swap)
-			// If bot is already busy, return order to queue
-			if !atomic.CompareAndSwapInt32(&b.busy, 0, 1) {
+			// Check if bot is available and claim the order
+			if b.isBotBusy() {
 				b.controller.ReturnOrderToQueue(order)
 				continue
 			}
@@ -52,9 +51,8 @@ func (b *Bot) Start() {
 			// Process order (blocks for 10 seconds or until stopped)
 			processed := b.processOrder(order)
 
-			// Release the bot
-			atomic.StoreInt32(&b.busy, 0)
-			b.SetCurrentOrder(nil)
+			// Release the bot after order is completed
+			b.releaseBot()
 
 			if !processed {
 				return // Bot was stopped during processing
@@ -170,4 +168,16 @@ func (b *Bot) SetCurrentOrder(order *Order) {
 // IsBusy returns whether the bot is currently processing an order
 func (b *Bot) IsBusy() bool {
 	return atomic.LoadInt32(&b.busy) == 1
+}
+
+// isBotBusy checks if bot is busy and atomically claims it if available.
+// Returns true if bot was already busy (cannot claim), false if successfully claimed.
+func (b *Bot) isBotBusy() bool {
+	return !atomic.CompareAndSwapInt32(&b.busy, 0, 1)
+}
+
+// releaseBot marks the bot as idle and clears the current order.
+func (b *Bot) releaseBot() {
+	atomic.StoreInt32(&b.busy, 0)
+	b.SetCurrentOrder(nil)
 }
