@@ -157,3 +157,49 @@ func TestVIPOrderPriority(t *testing.T) {
 
 	c.StopAllBots()
 }
+
+func TestOrderNotProcessedTwice(t *testing.T) {
+	c := NewTestController()
+
+	// Add 3 bots to create race condition potential
+	c.AddBot()
+	c.AddBot()
+	c.AddBot()
+
+	// Create 1 order
+	order, err := c.NewOrder("NORMAL")
+	if err != nil {
+		t.Fatalf("Failed to create order: %v", err)
+	}
+
+	// Wait for bots to pick up orders
+	time.Sleep(500 * time.Millisecond)
+
+	// Count how many bots are processing this specific order
+	processingCount := 0
+	for _, bot := range c.Bots {
+		current := bot.GetCurrentOrder()
+		if current != nil && current.ID == order.ID {
+			processingCount++
+		}
+	}
+
+	if processingCount > 1 {
+		t.Errorf("Order #%d is being processed by %d bots, expected 1", order.ID, processingCount)
+	}
+
+	// Wait for completion
+	time.Sleep(11 * time.Second)
+
+	// Verify order is completed exactly once
+	if c.GetCompletedCount() != 1 {
+		t.Errorf("Expected 1 completed order, got %d", c.GetCompletedCount())
+	}
+
+	completedOrders := c.GetCompletedOrders()
+	if len(completedOrders) != 1 || completedOrders[0].ID != order.ID {
+		t.Error("Wrong order in completed list")
+	}
+
+	c.StopAllBots()
+}
