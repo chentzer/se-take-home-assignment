@@ -14,6 +14,7 @@ type Bot struct {
 	currentOrder *Order        // The order currently being processed
 	orderMu      sync.Mutex    // Protects currentOrder access
 	stopChan     chan struct{} // Signal channel to stop the bot
+	stopMu       sync.Mutex    // Protects stopChan access
 	StopOnce     sync.Once     // Ensures stop signal is sent only once
 	controller   *Controller   // Reference to the parent controller
 }
@@ -24,8 +25,11 @@ func (b *Bot) Start() {
 	go func() {
 		for {
 			// Check for stop signal (non-blocking)
+			b.stopMu.Lock()
+			stopCh := b.stopChan
+			b.stopMu.Unlock()
 			select {
-			case <-b.stopChan:
+			case <-stopCh:
 				b.controller.Log("Bot #%d stopped", b.ID)
 				return
 			default:
@@ -64,7 +68,11 @@ func (b *Bot) Start() {
 // Stop signals the bot to stop processing. Safe to call multiple times.
 func (b *Bot) Stop() {
 	b.StopOnce.Do(func() {
-		close(b.stopChan)
+		b.stopMu.Lock()
+		defer b.stopMu.Unlock()
+		if b.stopChan != nil {
+			close(b.stopChan)
+		}
 	})
 }
 
@@ -74,6 +82,10 @@ func (b *Bot) processOrder(order *Order) bool {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	b.stopMu.Lock()
+	stopCh := b.stopChan
+	b.stopMu.Unlock()
+
 	select {
 	case <-ticker.C:
 		// Order completed successfully
@@ -82,7 +94,7 @@ func (b *Bot) processOrder(order *Order) bool {
 			b.ID, order.Type, order.ID)
 		return true
 
-	case <-b.stopChan:
+	case <-stopCh:
 		// Bot stopped while processing - return order to queue
 		b.controller.ReturnOrderToQueue(order)
 		b.controller.Log("Bot #%d destroyed while processing %s Order #%d - returning to queue",

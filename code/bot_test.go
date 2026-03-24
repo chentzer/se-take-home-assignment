@@ -158,6 +158,54 @@ func TestVIPOrderPriority(t *testing.T) {
 	c.StopAllBots()
 }
 
+// TestRemoveBotWhileProcessing tests the race condition where a bot is removed
+// while actively processing an order. This reproduces the scenario:
+// normal -> addbot -> removebot (while processing)
+func TestRemoveBotWhileProcessing(t *testing.T) {
+	c := NewTestController()
+
+	// Create an order first
+	order, err := c.NewOrder("NORMAL")
+	if err != nil {
+		t.Fatalf("Failed to create order: %v", err)
+	}
+
+	// Add bot - it will pick up the order
+	c.AddBot()
+
+	// Wait for bot to start processing
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify bot is processing
+	if len(c.Bots) != 1 {
+		t.Fatal("Expected 1 bot")
+	}
+	if !c.Bots[0].IsBusy() {
+		t.Fatal("Bot should be busy processing")
+	}
+
+	// Remove bot while it's processing (this triggers the race condition)
+	c.RemoveBot()
+
+	// Wait for removal to complete
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify order was returned to queue
+	_, normalCount := c.GetPendingCount()
+	if normalCount != 1 {
+		t.Errorf("Order should be back in queue, got %d pending", normalCount)
+	}
+
+	// Verify the order can be retrieved again
+	returnedOrder := c.GetNextOrder()
+	if returnedOrder == nil {
+		t.Fatal("Order should be available in queue")
+	}
+	if returnedOrder.ID != order.ID {
+		t.Errorf("Expected order ID %d, got %d", order.ID, returnedOrder.ID)
+	}
+}
+
 func TestOrderNotProcessedTwice(t *testing.T) {
 	c := NewTestController()
 
