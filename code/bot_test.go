@@ -8,13 +8,13 @@ import (
 func TestAddBot(t *testing.T) {
 	c := NewTestController()
 
-	initialBotCount := len(c.Bots)
+	initialBotCount := c.GetBotCount()
 	c.AddBot()
 
 	time.Sleep(100 * time.Millisecond)
 
-	if len(c.Bots) != initialBotCount+1 {
-		t.Errorf("Expected %d bots, got %d", initialBotCount+1, len(c.Bots))
+	if c.GetBotCount() != initialBotCount+1 {
+		t.Errorf("Expected %d bots, got %d", initialBotCount+1, c.GetBotCount())
 	}
 
 	c.StopAllBots()
@@ -27,13 +27,13 @@ func TestRemoveBot(t *testing.T) {
 	c.AddBot()
 	time.Sleep(100 * time.Millisecond)
 
-	initialBotCount := len(c.Bots)
+	initialBotCount := c.GetBotCount()
 	c.RemoveBot()
 
 	time.Sleep(100 * time.Millisecond)
 
-	if len(c.Bots) != initialBotCount-1 {
-		t.Errorf("Expected %d bots, got %d", initialBotCount-1, len(c.Bots))
+	if c.GetBotCount() != initialBotCount-1 {
+		t.Errorf("Expected %d bots, got %d", initialBotCount-1, c.GetBotCount())
 	}
 
 	c.StopAllBots()
@@ -42,11 +42,11 @@ func TestRemoveBot(t *testing.T) {
 func TestRemoveBotWhenEmpty(t *testing.T) {
 	c := NewTestController()
 
-	initialBotCount := len(c.Bots)
+	initialBotCount := c.GetBotCount()
 	c.RemoveBot()
 
-	if len(c.Bots) != initialBotCount {
-		t.Errorf("Bot count should remain %d, got %d", initialBotCount, len(c.Bots))
+	if c.GetBotCount() != initialBotCount {
+		t.Errorf("Bot count should remain %d, got %d", initialBotCount, c.GetBotCount())
 	}
 }
 
@@ -65,7 +65,8 @@ func TestBotProcessesOrder(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	hasOrder := c.Bots[0].GetCurrentOrder() != nil
+	bot := c.GetBot(0)
+	hasOrder := bot != nil && bot.GetCurrentOrder() != nil
 
 	if !hasOrder {
 		t.Error("Bot should have an order")
@@ -95,7 +96,8 @@ func TestBotReturnsOrderWhenRemoved(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	hasOrder := c.Bots[0].GetCurrentOrder() != nil
+	bot := c.GetBot(0)
+	hasOrder := bot != nil && bot.GetCurrentOrder() != nil
 
 	if !hasOrder {
 		t.Fatal("Bot does not have order")
@@ -123,7 +125,11 @@ func TestBotDoesNotTakeOrderWhenBusy(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	isBusy := c.Bots[0].IsBusy()
+	bot := c.GetBot(0)
+	if bot == nil {
+		t.Fatal("Bot not found")
+	}
+	isBusy := bot.IsBusy()
 
 	if !isBusy {
 		t.Fatal("Bot is not busy")
@@ -149,7 +155,10 @@ func TestVIPOrderPriority(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	bot := c.Bots[0]
+	bot := c.GetBot(0)
+	if bot == nil {
+		t.Fatal("Bot not found")
+	}
 	currentOrder := bot.GetCurrentOrder()
 	if currentOrder != nil && currentOrder.Type != "VIP" {
 		t.Errorf("Bot should pick VIP first, got %s", currentOrder.Type)
@@ -177,10 +186,11 @@ func TestRemoveBotWhileProcessing(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Verify bot is processing
-	if len(c.Bots) != 1 {
+	if c.GetBotCount() != 1 {
 		t.Fatal("Expected 1 bot")
 	}
-	if !c.Bots[0].IsBusy() {
+	bot := c.GetBot(0)
+	if bot == nil || !bot.IsBusy() {
 		t.Fatal("Bot should be busy processing")
 	}
 
@@ -225,7 +235,7 @@ func TestOrderNotProcessedTwice(t *testing.T) {
 
 	// Count how many bots are processing this specific order
 	processingCount := 0
-	for _, bot := range c.Bots {
+	for _, bot := range c.GetAllBots() {
 		current := bot.GetCurrentOrder()
 		if current != nil && current.ID == order.ID {
 			processingCount++

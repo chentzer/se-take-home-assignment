@@ -193,3 +193,32 @@ func (c *Controller) Log(format string, args ...interface{}) {
 		c.LogFunc(format, args...)
 	}
 }
+
+// GetBot returns the bot at the given index, or nil if out of range.
+// Thread-safe access to the Bots slice.
+func (c *Controller) GetBot(index int) *Bot {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if index < 0 || index >= len(c.Bots) {
+		return nil
+	}
+	return c.Bots[index]
+}
+
+// GetBotCount returns the number of active bots.
+// Thread-safe access to the Bots slice length.
+func (c *Controller) GetBotCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.Bots)
+}
+
+// GetAllBots returns a copy of the bots slice for safe iteration.
+// Thread-safe access to the Bots slice.
+func (c *Controller) GetAllBots() []*Bot {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	botsCopy := make([]*Bot, len(c.Bots))
+	copy(botsCopy, c.Bots)
+	return botsCopy
+}
